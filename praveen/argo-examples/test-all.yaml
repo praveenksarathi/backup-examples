@@ -1,0 +1,117 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: combined-
+spec:
+  entrypoint: combined-example
+  arguments:
+    parameters:
+    - name: should-print
+      value: "false"
+    - name: input-value
+      value: 10
+
+
+  templates:
+  - name: combined-example
+    inputs:
+      parameters:
+      - name: should-print
+      - name: input-value
+    steps:
+    - - name: test-equals
+        template: equals-conditional
+        when: "{{inputs.parameters.should-print}} == true"
+    - - name: test-not-equals
+        template: is-not-equals
+        when: "{{inputs.parameters.should-print}} != false"
+    - - name: and-check
+        template: and-conditional
+        when: "({{inputs.parameters.should-print}} == true) && ({{inputs.parameters.input-value}} == 10)"
+    - - name: or-check
+        template: or-conditional
+        when: "({{inputs.parameters.should-print}} == true) || ({{inputs.parameters.input-value}} > 10)"
+    - - name: greater-check
+        template: range-conditional-greater
+        when: "{{inputs.parameters.input-value}} > 10"
+    - - name: lesser-check
+        template: range-conditional-lesser
+        when: "{{inputs.parameters.input-value}} < 10"
+    - - name: recursive-loop
+        template: flip-a-coin
+        when: "{{inputs.parameters.input-value}} < 10"
+    - - name: recursive-check
+        template: check-heads
+        when: "{{steps.recursive-loop.output.result}} == heads"
+    - - name: event-looping-list
+        template: loopsay
+        arguments:
+          parameters:
+          - name: message
+            value: "{{item}}"
+        withItems:
+        - Welcome
+        - to
+        - Narnia
+    - - name: event-looping-map
+        template: loopsay-map
+        arguments:
+          parameters:
+          - name: firstname
+            value: "{{item.firstname}}"
+          - name: firstname
+            value: "{{item.lastname}}"
+        withItems:
+        - { firstname:'Praveen' , lastname:'Kumar'}
+        - { firstname:'Tom' , lastname:'Cruise'}
+        - { firstname:'Ashish' , lastname:'Karki'}
+        - { firstname:'Prateek' , lastname:'Gupta'}
+
+
+  - name: is-not-equals
+    container:
+      image: docker/whalesay:latest
+      command: [sh, -c]
+      args: ["cowsay no the data are not equal"]
+  - name: equals-conditional
+    container:
+      image: docker/whalesay:latest
+      command: [sh, -c]
+      args: ["cowsay the values are equal"]
+  - name: or-conditional
+    container:
+      image: docker/whalesay:latest
+      command: [sh, -c]
+      args: ["cowsay either of the conditions got met"]
+  - name: and-conditional
+    container:
+      image: docker/whalesay:latest
+      command: [sh, -c]
+      args: ["cowsay all the conditions met"]
+  - name: range-conditional-greater
+    container:
+      image: docker/whalesay:latest
+      command: [sh, -c]
+      args: ["cowsay entered value is greater than prescribed condition"]
+  - name: range-conditional-lesser
+    container:
+      image: docker/whalesay:latest
+      command: [sh, -c]
+      args: ["cowsay entered value is lesser than prescribed condition"]
+  - name: loopsay
+    inputs:
+      parameters:
+      - name: message
+    container:
+      image: docker/whalesay:latest
+      command: [cowsay]
+      args: ["{{inputs.parameters.message}}"]
+  - name: loopsay-map
+    inputs:
+      parameters:
+      - name: firstname
+      - name: lastname
+    container:
+      image: docker/whalesay:latest
+      command: [cowsay]
+      args: ["Welcome Mr.{{inputs.parameters.firstname}} {{inputs.parameters.lastname}}"]
